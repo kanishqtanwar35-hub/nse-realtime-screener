@@ -47,8 +47,15 @@ Run:
 
 ```bash
 dist\nse-screener\nse-screener.exe --relax-liquidity --cycles 10
-dist\nse-screener\nse-screener-dashboard.exe        # opens http://localhost:8501
+dist\nse-screener\nse-screener-dashboard.exe            # http://localhost:8501
+dist\nse-screener\nse-screener-dashboard.exe --port 8600
 ```
+
+The dashboard takes `--port` / `-p`, or `DASHBOARD_PORT` from the environment, and
+**falls forward to the next free port** if the one it wants is taken. That is not a
+nicety: Streamlit's default behaviour is to print `Port 8501 is not available` and
+exit, and 8501 is occupied by any other Streamlit app, a stray Jupyter server, or a
+previous copy of this dashboard. A binary handed to a reviewer must not die on that.
 
 ---
 
@@ -112,9 +119,36 @@ where the metadata and hidden-import failures actually surface.
 
 - [ ] `nse-screener.exe --help` prints usage
 - [ ] `nse-screener.exe --cycles 2 --relax-liquidity` completes and writes `data/screener.db`
-- [ ] `nse-screener-dashboard.exe` serves on :8501 and renders all four tabs
+- [ ] `nse-screener-dashboard.exe` serves and renders all six tabs
+- [ ] It still starts when 8501 is already taken, on the next port
+- [ ] The **Charts** tab draws price with both SMMA lines and crossover markers —
+      this is the one that fails if Altair is not fully collected
+- [ ] The **Analytics** tab completes its walk-forward pass (about 12 s) and the
+      separation table shows p-values rather than blanks — blanks mean `scipy.stats`
+      did not make it into the bundle
 - [ ] The Model tab shows a loaded model (not "none")
 - [ ] Killing the CLI with Ctrl-C shuts down cleanly rather than stack-tracing
+
+A fast structural check that does not need a browser — it reads the frozen archive
+and asserts the modules are actually inside it:
+
+```bash
+python -c "
+from PyInstaller.archive.readers import CArchiveReader, ZlibArchiveReader
+import tempfile, os
+a = CArchiveReader('dist/nse-screener/nse-screener-dashboard.exe')
+d = a.extract('PYZ.pyz'); d = d if isinstance(d, bytes) else d[1]
+p = os.path.join(tempfile.gettempdir(), 'x.pyz'); open(p,'wb').write(d)
+toc = list(ZlibArchiveReader(p).toc)
+for pkg in ('nse_screener.analytics', 'nse_screener.dashboard.charts'):
+    print(pkg, 'OK' if pkg in toc else 'MISSING')
+print('altair', sum(1 for m in toc if m.startswith('altair')))
+print('scipy.stats', sum(1 for m in toc if m.startswith('scipy.stats')))
+"
+```
+
+Last verified: 24 `nse_screener` modules, 55 altair modules, 59 `scipy.stats`
+modules in the dashboard archive.
 
 ---
 

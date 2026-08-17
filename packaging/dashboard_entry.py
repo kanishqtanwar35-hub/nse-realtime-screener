@@ -7,6 +7,10 @@ Under a frozen build:
   * sys.executable points at the bootloader, so letting Streamlit re-spawn it
     would relaunch the exe instead of the script - an infinite fork
 Calling bootstrap.run() directly starts the server IN-PROCESS and sidesteps both.
+
+    nse-screener-dashboard.exe                 # 8501, or the next free port
+    nse-screener-dashboard.exe --port 8600
+    DASHBOARD_PORT=8600 nse-screener-dashboard.exe
 """
 from __future__ import annotations
 
@@ -47,6 +51,47 @@ except ImportError:
     pass
 
 
+def requested_port(argv: list[str]) -> int:
+    """`--port N` / `-p N` on the command line, else DASHBOARD_PORT, else 8501."""
+    for flag in ("--port", "-p"):
+        if flag in argv:
+            i = argv.index(flag)
+            if i + 1 < len(argv):
+                try:
+                    return int(argv[i + 1])
+                except ValueError:
+                    print(f"ignoring non-numeric {flag} {argv[i + 1]!r}", file=sys.stderr)
+    return int(os.environ.get("DASHBOARD_PORT", 8501))
+
+
+def free_port(preferred: int, attempts: int = 20) -> int:
+    """
+    First free port at or after `preferred`.
+
+    Without this the exe prints "Port 8501 is not available" and exits - which
+    is what happens to anyone who already has a Streamlit app, a Jupyter server,
+    or a previous copy of this dashboard running. A binary handed to a reviewer
+    should move to the next port and say so, not die on a detail like that.
+    """
+    import socket
+
+    for offset in range(attempts):
+        candidate = preferred + offset
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                sock.bind(("", candidate))
+            except OSError:
+                continue
+        if offset:
+            print(f"port {preferred} is in use - starting on {candidate} instead")
+        return candidate
+
+    print(f"no free port in {preferred}-{preferred + attempts - 1}; trying {preferred} anyway",
+          file=sys.stderr)
+    return preferred
+
+
 def app_path() -> Path:
     """Locate app.py inside the bundle, or in the source tree when not frozen."""
     if getattr(sys, "frozen", False):
@@ -72,7 +117,7 @@ def main() -> int:
     from streamlit.web import bootstrap
 
     flag_options = {
-        "server.port": int(os.environ.get("DASHBOARD_PORT", 8501)),
+        "server.port": free_port(requested_port(sys.argv[1:])),
         "server.headless": False,
         "browser.gatherUsageStats": False,
         "global.developmentMode": False,
