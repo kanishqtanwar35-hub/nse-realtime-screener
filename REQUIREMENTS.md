@@ -166,6 +166,9 @@ and a `UnicodeEncodeError` from Streamlit's own code on a cp1252 console.
 The packaging bugs were only findable by running the exe — every broken build
 still returned HTTP 200. Details in `packaging/BUILD_EXE.md`.
 
-**Note on the build folder:** the final build is in `dist5/` because a stale file
-handle held `dist/`. Rename it to `dist/` before submitting:
-`rmdir /s /q dist && ren dist5 dist`
+**Note on the build folder:** builds land in a numbered `distN/` because Windows
+keeps a handle on the previous `dist/` after the frozen dashboard has run once,
+and even `Rename-Item` is refused until the handle is released. It does not reach
+anyone: the shipped archive is built with `nse-screener/` as its root, so the
+build folder's name never appears outside this machine. `.gitignore` covers
+`dist[0-9]*/` for the same reason.
