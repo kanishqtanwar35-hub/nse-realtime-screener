@@ -77,11 +77,17 @@ def free_port(preferred: int, attempts: int = 20) -> int:
 
     for offset in range(attempts):
         candidate = preferred + offset
+        # Probe by CONNECTING, not by binding.
+        #
+        # The obvious test - bind and see if it fails - is wrong on Windows.
+        # SO_REUSEADDR there means "let me steal this port", so the bind
+        # SUCCEEDS against a port another process is already serving on, and the
+        # probe reports free for a port that is not. Dropping SO_REUSEADDR is
+        # not enough either: a bind can still succeed against a socket in
+        # TIME_WAIT. If something answers a connection, the port is taken.
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            try:
-                sock.bind(("", candidate))
-            except OSError:
+            sock.settimeout(0.3)
+            if sock.connect_ex(("127.0.0.1", candidate)) == 0:
                 continue
         if offset:
             print(f"port {preferred} is in use - starting on {candidate} instead")
