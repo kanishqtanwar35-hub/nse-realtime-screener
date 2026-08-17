@@ -33,6 +33,12 @@ if str(SRC) not in sys.path:
 # --------------------------------------------------------------------------
 st_datas, st_binaries, st_hidden = collect_all("streamlit")
 
+# Altair draws every chart in the dashboard. Streamlit's own hook pulls in
+# enough of it to render, but `charts.py` also calls `.to_json()` for the
+# standalone report, which touches the schema modules - so collect it whole
+# rather than discovering the gap at runtime in a frozen build.
+al_datas, al_binaries, al_hidden = collect_all("altair")
+
 metadata = []
 for pkg in ("streamlit", "pandas", "numpy", "scikit-learn", "altair",
             "pyarrow", "joblib", "packaging"):
@@ -72,9 +78,15 @@ SKLEARN_HIDDEN = [
 # raised only by the dashboard, only at runtime, only when a page is rendered.
 NSE_MODULES = collect_submodules("nse_screener")
 
-HIDDEN = st_hidden + SKLEARN_HIDDEN + NSE_MODULES + [
+HIDDEN = st_hidden + al_hidden + SKLEARN_HIDDEN + NSE_MODULES + [
     "pandas._libs.tslibs.base",
     "sqlite3",
+    # analytics.py imports scipy.stats lazily for the Mann-Whitney p-value.
+    # The lazy import is guarded, so a missing scipy degrades to NaN p-values
+    # rather than crashing - which is exactly the kind of silent downgrade
+    # worth spending two lines to avoid.
+    "scipy.stats",
+    "scipy.special",
 ]
 
 # Optional broker SDKs pull in a large tree. Remove from excludes and add the
@@ -82,7 +94,7 @@ HIDDEN = st_hidden + SKLEARN_HIDDEN + NSE_MODULES + [
 EXCLUDES = ["matplotlib", "tkinter", "PyQt5", "PySide2", "notebook",
             "fyers_apiv3", "SmartApi", "xgboost", "shap"]
 
-DATAS = st_datas + metadata + [
+DATAS = st_datas + al_datas + metadata + [
     # Bundled under a NEUTRAL directory. Placing it at "nse_screener/dashboard"
     # makes that folder shadow the real frozen package and breaks every
     # submodule import inside the dashboard script.
