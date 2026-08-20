@@ -71,12 +71,12 @@ nobody validates out of sample cannot be trusted.
 |---|---|---|
 | Python source code | ✅ | 29 modules, 104 tests |
 | **Executable (.exe)** | ✅ | Built **and run**: `dist5/nse-screener/nse-screener.exe` + `-dashboard.exe`. Four packaging bugs found and fixed — see `packaging/BUILD_EXE.md` |
-| **Screen recording** | ❌ | **You must record this.** Script provided in `DEMO_SCRIPT.md` |
+| **Screen recording** | ❌ | Not included in this repository |
 | Credentials removed/masked | ✅ | Env-only; `.env` gitignored; `redacted()` logs presence, never values |
 
 ---
 
-## The four things you must do before submitting
+## The three things you must do before submitting
 
 ### 1. Get a Fyers or Angel One account and test against it
 The assignment lists this as a **prerequisite**. My broker adapters are written
@@ -97,10 +97,7 @@ Requirement 1 says *all* NSE stocks. The app ships with 28. Download
 ~8 req/s that is ~4 minutes before the first signal, and quote polling becomes
 request-bound. Step up: 50 → 200 → 500, measuring cycle time each step.
 
-### 3. Record the demo
-See `DEMO_SCRIPT.md`.
-
-### 4. Decide what to say about the liquidity filter
+### 3. Decide what to say about the liquidity filter
 Both-sides > 10,00,000 will return **an empty screen** on real NSE cash data in
 the ₹30–500 band. It is implemented exactly as specified. In your submission,
 say so explicitly and show both: the filter as specified, and a relaxed run that

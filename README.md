@@ -38,7 +38,6 @@ when credentials are supplied through the environment.
 > | **[REQUIREMENTS.md](REQUIREMENTS.md)** | Every assignment requirement → implementation → verification status |
 > | **[BUILD_JOURNAL.md](BUILD_JOURNAL.md)** | How it was built: decisions, alternatives rejected, and the 8 bugs found |
 > | **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** | System internals, the quant domain, and the roadmap of improvements |
-> | **[DEMO_SCRIPT.md](DEMO_SCRIPT.md)** | Timed 7-minute script for the screen recording |
 > | **[packaging/BUILD_EXE.md](packaging/BUILD_EXE.md)** | Freezing to .exe, and the 4 packaging bugs that had to be solved |
 
 ## Quick start
